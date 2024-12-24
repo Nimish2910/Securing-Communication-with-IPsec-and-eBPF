@@ -1,5 +1,3 @@
-
-
 # Securing Communication with IPsec and eBPF
 
 ## Overview
@@ -8,23 +6,23 @@ This project demonstrates how to secure communication between two virtual machin
 
 The implementation includes:
 
-- **Packet Capture**: Ingress and egress UDP packet handling.
-- **Key Exchange**: Secure Diffie-Hellman-based shared key derivation.
-- **Encryption/Decryption**: Real-time encryption and decryption of messages.
-- **Traffic Analysis**: Insights into message statistics between Alice and Bob.
+- **Packet Capture**: Ingress and egress UDP packet handling
+- **Key Exchange**: Secure Diffie-Hellman-based shared key derivation
+- **Encryption/Decryption**: Real-time encryption and decryption of messages
+- **Traffic Analysis**: Insights into message statistics between Alice and Bob
 
 ## Features
 
 1. **Secure Communication**:
-   - Capture UDP packets on port `12345`.
-   - Encrypt egress messages and decrypt ingress messages using a shared key derived via Diffie-Hellman.
+   - Capture UDP packets on port `12345`
+   - Encrypt egress messages and decrypt ingress messages using a shared key derived via Diffie-Hellman
 
 2. **eBPF Integration**:
-   - Implement eBPF programs to manage network traffic at the kernel level.
-   - Log packet details, including payloads and message statistics, to `trace_pipe`.
+   - Implement eBPF programs to manage network traffic at the kernel level
+   - Log packet details, including payloads and message statistics, to `trace_pipe`
 
 3. **Packet Statistics**:
-   - Count ingress and egress messages to analyze traffic patterns.
+   - Count ingress and egress messages to analyze traffic patterns
 
 ## Setup Instructions
 
@@ -35,80 +33,90 @@ The implementation includes:
   sudo apt update && sudo apt install -y clang llvm
   wget https://github.com/eunomia-bpf/eunomia-bpf/releases/latest/download/ecc && chmod +x ./ecc
   wget https://aka.pw/bpf-ecli -O ecli && chmod +x ./ecli
+  ```
 
-Development Environment
+## Development Environment
 
-Using Multipass (Local Machine)
-	1.	Install Multipass: Multipass Installation Guide.
-	2.	Launch VMs:
+### Using Multipass (Local Machine)
 
-multipass launch 22.04 --name alice --disk 10G --memory 4G --cpus 2
-multipass launch 22.04 --name bob --disk 10G --memory 4G --cpus 2
+1. Install Multipass: https://multipass.run/install 
 
+2. Launch VMs:
+   ```bash
+   multipass launch 22.04 --name alice --disk 10G --memory 4G --cpus 2
+   multipass launch 22.04 --name bob --disk 10G --memory 4G --cpus 2
+   ```
 
-	3.	Retrieve VM IPs:
+3. Retrieve VM IPs:
+   ```bash
+   multipass info
+   ```
 
-multipass info
-
-
-
-Using vSphere Virtual Machines
+### Using vSphere Virtual Machines
 
 Follow the vSphere tutorial to configure and use department-provided VMs as Alice and Bob.
 
-Running the eBPF Program
-	1.	Compile the program:
+## Running the eBPF Program
 
-./ecc ingress.c
+1. Compile the program:
+   ```bash
+   ./ecc ingress.c
+   ```
 
+2. Run the program:
+   ```bash
+   sudo ./ecli run package.json
+   ```
 
-	2.	Run the program:
+3. Observe the output:
+   ```bash
+   sudo -s
+   echo 1 > /sys/kernel/debug/tracing/tracing_on
+   sudo cat /sys/kernel/debug/tracing/trace_pipe
+   ```
 
-sudo ./ecli run package.json
+## Project Components
 
+1. **Packet Capture**:
+   - Modify ingress.c to:
+     - Capture both ingress and egress UDP packets on port 12345
+     - Log UDP payload content
 
-	3.	Observe the output:
+2. **Key Exchange**:
+   - Use Diffie-Hellman key exchange with predefined modulus (p = 23) and generator (g = 5)
+   - Derive a shared key between Alice and Bob
 
-sudo -s
-echo 1 > /sys/kernel/debug/tracing/tracing_on
-sudo cat /sys/kernel/debug/tracing/trace_pipe
+3. **Encryption and Decryption**:
+   - Apply XOR encryption to outgoing messages
+   - Decrypt incoming messages using the derived shared key
 
+4. **Message Statistics**:
+   - Count ingress and egress messages and log statistics
 
+## Testing the System
 
-Project Components
-	1.	Packet Capture:
-	•	Modify ingress.c to:
-	•	Capture both ingress and egress UDP packets on port 12345.
-	•	Log UDP payload content.
-	2.	Key Exchange:
-	•	Use Diffie-Hellman key exchange with predefined modulus (p = 23) and generator (g = 5).
-	•	Derive a shared key between Alice and Bob.
-	3.	Encryption and Decryption:
-	•	Apply XOR encryption to outgoing messages.
-	•	Decrypt incoming messages using the derived shared key.
-	4.	Message Statistics:
-	•	Count ingress and egress messages and log statistics.
+1. Simulate Eve listening for messages:
+   ```bash
+   sudo tcpdump -i <Broadcast_Interface> udp port 12345 -A
+   ```
 
-Testing the System
-	1.	Simulate Eve listening for messages:
+2. Set up communication:
+   - On Alice:
+     ```bash
+     nc -ul 12345
+     ```
+   - On Bob:
+     ```bash
+     nc -u -p 12345 <Alice_IP> 12345
+     ```
 
-sudo tcpdump -i <Broadcast_Interface> udp port 12345 -A
+3. Verify encrypted traffic and message logs
 
+## References
 
-	2.	Set up communication:
-	•	On Alice:
-
-nc -ul 12345
-
-
-	•	On Bob:
-
-nc -u -p 12345 <Alice_IP> 12345
-
-
-	3.	Verify encrypted traffic and message logs.
-
-References
-	•	eBPF Developer Tutorial
-	•	Diffie-Hellman Key Exchange
-	•	Multipass Installation Guide
+* https://youtu.be/M-0qt6tdHzk?si=TD69xQYFusyOG8yE
+* https://en.wikipedia.org/wiki/Diffie–Hellman_key_exchange
+* https://www.getoutsidedoor.com/2020/03/23/diffie-hellman-key-exchange/ L
+* https://github.com/eunomia-bpf/bpf-developer-tutorial/blob/main/src/0-introduce 
+* https://github.com/eunomia-bpf/bpf-developer-tutorial/tree/main/src/20-tc
+ 
